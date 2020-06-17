@@ -1,0 +1,8 @@
+//
+// Created by zilliz on 20-6-17.
+//
+
+#ifndef MILVUS_ENGINE_INDEXHNSW_NM_H
+#define MILVUS_ENGINE_INDEXHNSW_NM_H
+
+#endif //MILVUS_ENGINE_INDEXHNSW_NM_H
