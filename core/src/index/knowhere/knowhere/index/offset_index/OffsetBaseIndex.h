@@ -12,36 +12,33 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
-#include "cache/DataObj.h"
+#include <faiss/Index.h>
+
 #include "knowhere/common/BinarySet.h"
-#include "knowhere/common/Config.h"
+#include "knowhere/index/vector_index/IndexType.h"
 
 namespace milvus {
 namespace knowhere {
 
-class Index : public milvus::cache::DataObj {
- public:
-    virtual BinarySet
-    Serialize(const Config& config = Config()) {};
-
-    virtual void
-    Load(const BinarySet&) {};
-
-    virtual void
-    Load(const BinarySet&, const void*, size_t) {};
-};
-
-using IndexPtr = std::shared_ptr<Index>;
-
-// todo: remove from knowhere
-class ToIndexData : public milvus::cache::DataObj {
- public:
-    explicit ToIndexData(int64_t size) : size_(size) {
+class OffsetBaseIndex {
+ protected:
+    explicit OffsetBaseIndex(std::shared_ptr<faiss::Index> index) : index_(std::move(index)) {
     }
 
- private:
-    int64_t size_ = 0;
+    virtual BinarySet
+    SerializeImpl(const IndexType& type);
+
+    virtual void
+    LoadImpl(const BinarySet&, const IndexType& type);
+
+    virtual void
+    SealImpl() { /* do nothing */
+    }
+
+ public:
+    std::shared_ptr<faiss::Index> index_ = nullptr;
 };
 
 }  // namespace knowhere

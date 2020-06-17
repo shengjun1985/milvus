@@ -195,7 +195,8 @@ struct IndexIVF: Index, Level1Quantizer {
 
     /** Similar to search_preassigned, but does not store codes **/
     virtual void search_preassigned_without_codes (idx_t n, const float *x, 
-                                                   const float *original_codes, idx_t k,
+                                                   const float *arranged_codes, 
+                                                   std::vector<size_t> prefix_sum, idx_t k,
                                                    const idx_t *assign,
                                                    const float *centroid_dis,
                                                    float *distances, idx_t *labels,
@@ -209,7 +210,8 @@ struct IndexIVF: Index, Level1Quantizer {
                  ConcurrentBitsetPtr bitset = nullptr) const override;
 
     /** Similar to search, but does not store codes **/
-    void search_without_codes (idx_t n, const float *x, const float *original_codes, 
+    void search_without_codes (idx_t n, const float *x, 
+                               const float *arranged_codes, std::vector<size_t> prefix_sum, 
                                idx_t k, float *distances, idx_t *labels,
                                ConcurrentBitsetPtr bitset = nullptr);
 
@@ -382,6 +384,7 @@ struct InvertedListScanner {
     /** Similar to scan_codes, but codes are stored outside. **/
     virtual size_t scan_codes_outside (size_t n,
                                        const uint8_t *codes,
+                                       size_t offset,
                                        const idx_t *ids,
                                        float *distances, idx_t *labels,
                                        size_t k,

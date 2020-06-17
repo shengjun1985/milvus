@@ -19,19 +19,19 @@
 #include <faiss/IndexIVF.h>
 
 #include "knowhere/common/Typedef.h"
-#include "knowhere/index/vector_index/FaissBaseIndex.h"
+#include "knowhere/index/offset_index/OffsetBaseIndex.h"
 #include "knowhere/index/vector_index/VecIndex.h"
 
 namespace milvus {
 namespace knowhere {
 
-class IVF_NM : public VecIndex, public FaissBaseIndex {
+class IVF_NM : public VecIndex, public OffsetBaseIndex {
  public:
-    IVF_NM() : FaissBaseIndex(nullptr) {
+    IVF_NM() : OffsetBaseIndex(nullptr) {
         index_type_ = IndexEnum::INDEX_FAISS_IVFFLAT;
     }
 
-    explicit IVF_NM(std::shared_ptr<faiss::Index> index) : FaissBaseIndex(std::move(index)) {
+    explicit IVF_NM(std::shared_ptr<faiss::Index> index) : OffsetBaseIndex(std::move(index)) {
         index_type_ = IndexEnum::INDEX_FAISS_IVFFLAT;
     }
 
@@ -39,7 +39,7 @@ class IVF_NM : public VecIndex, public FaissBaseIndex {
     Serialize(const Config& config = Config()) override;
 
     void
-    Load(const BinarySet&, const void*) override;
+    Load(const BinarySet&, const void*, size_t) override;
 
     void
     Train(const DatasetPtr&, const Config&) override;
@@ -95,6 +95,7 @@ class IVF_NM : public VecIndex, public FaissBaseIndex {
  protected:
     std::mutex mutex_;
     float *arranged_data;
+    std::vector<size_t> prefix_sum;
 };
 
 using IVFNMPtr = std::shared_ptr<IVF_NM>;

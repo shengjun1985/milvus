@@ -57,7 +57,7 @@ IVF_NM::Serialize(const Config& config) {
 }
 
 void
-IVF_NM::Load(const BinarySet& binary_set, const void* p_data) {
+IVF_NM::Load(const BinarySet& binary_set, const void* p_data, size_t nb) {
     std::lock_guard<std::mutex> lk(mutex_);
     LoadImpl(binary_set, index_type_);
 
@@ -67,12 +67,14 @@ IVF_NM::Load(const BinarySet& binary_set, const void* p_data) {
     auto invlists = ivf_index->invlists;
     auto ails = dynamic_cast<faiss::ArrayInvertedLists *> (invlists);
     auto d = ivf_index->d;
+    arranged_data = new float[d * nb];
     size_t curr_index = 0;
     for (int i = 0; i < ails->nlist; i++) {
         auto list_size = ails->ids[i].size();
         for (int j = 0; j < list_size; j++) {
             memcpy(arranged_data + d * (curr_index + j), original_data + d * ails->ids[i][j], d * sizeof(float));
         }
+        prefix_sum.push_back(curr_index);
         curr_index += list_size;
     }
 }
@@ -98,7 +100,7 @@ IVF_NM::Add(const DatasetPtr& dataset_ptr, const Config& config) {
 
     std::lock_guard<std::mutex> lk(mutex_);
     GETTENSORWITHIDS(dataset_ptr)
-    index_->add_with_ids(rows, (float*)p_data, p_ids);
+    index_->add_with_ids_without_codes(rows, (float*)p_data, p_ids);
 }
 
 void
@@ -109,7 +111,7 @@ IVF_NM::AddWithoutIds(const DatasetPtr& dataset_ptr, const Config& config) {
 
     std::lock_guard<std::mutex> lk(mutex_);
     GETTENSOR(dataset_ptr)
-    index_->add(rows, (float*)p_data);
+    index_->add_without_codes(rows, (float*)p_data);
 }
 
 DatasetPtr
@@ -132,19 +134,6 @@ IVF_NM::Query(const DatasetPtr& dataset_ptr, const Config& config) {
         auto p_dist = (float*)malloc(p_dist_size);
 
         QueryImpl(rows, (float*)p_data, k, p_dist, p_id, config);
-
-        //    std::stringstream ss_res_id, ss_res_dist;
-        //    for (int i = 0; i < 10; ++i) {
-        //        printf("%llu", p_id[i]);
-        //        printf("\n");
-        //        printf("%.6f", p_dist[i]);
-        //        printf("\n");
-        //        ss_res_id << p_id[i] << " ";
-        //        ss_res_dist << p_dist[i] << " ";
-        //    }
-        //    std::cout << std::endl << "after search: " << std::endl;
-        //    std::cout << ss_res_id.str() << std::endl;
-        //    std::cout << ss_res_dist.str() << std::endl << std::endl;
 
         auto ret_ds = std::make_shared<Dataset>();
         ret_ds->Set(meta::IDS, p_id);
@@ -315,7 +304,7 @@ IVF_NM::QueryImpl(int64_t n, const float* data, int64_t k, float* distances, int
     } else {
         ivf_index->parallel_mode = 0;
     }
-    ivf_index->search(n, (float*)data, k, distances, labels, bitset_);
+    ivf_index->search_without_codes(n, (float*)data, arranged_data, prefix_sum, k, distances, labels, bitset_);
     stdclock::time_point after = stdclock::now();
     double search_cost = (std::chrono::duration<double, std::micro>(after - before)).count();
     LOG_KNOWHERE_DEBUG_ << "IVF search cost: " << search_cost

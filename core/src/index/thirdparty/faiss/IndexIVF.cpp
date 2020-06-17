@@ -326,7 +326,8 @@ void IndexIVF::search (idx_t n, const float *x, idx_t k,
     indexIVF_stats.search_time += getmillisecs() - t0;
 }
 
-void IndexIVF::search_without_codes (idx_t n, const float *x, const float *original_codes, 
+void IndexIVF::search_without_codes (idx_t n, const float *x, 
+                                     const float *arranged_codes, std::vector<size_t> prefix_sum, 
                                      idx_t k, float *distances, idx_t *labels,
                                      ConcurrentBitsetPtr bitset) 
 {
@@ -340,7 +341,7 @@ void IndexIVF::search_without_codes (idx_t n, const float *x, const float *origi
     t0 = getmillisecs();
     invlists->prefetch_lists (idx.get(), n * nprobe);
 
-    search_preassigned_without_codes (n, x, original_codes, k, idx.get(), coarse_dis.get(),
+    search_preassigned_without_codes (n, x, arranged_codes, prefix_sum, k, idx.get(), coarse_dis.get(),
                                       distances, labels, false, nullptr, bitset);
     indexIVF_stats.search_time += getmillisecs() - t0;
 }
@@ -575,7 +576,8 @@ void IndexIVF::search_preassigned (idx_t n, const float *x, idx_t k,
 
 
 void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x, 
-                                                 const float *original_codes, idx_t k,
+                                                 const float *arranged_codes, 
+                                                 std::vector<size_t> prefix_sum,  idx_t k,
                                                  const idx_t *keys,
                                                  const float *coarse_dis ,
                                                  float *distances, idx_t *labels,
@@ -635,7 +637,7 @@ void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x,
 
         // single list scan using the current scanner (with query
         // set porperly) and storing results in simi and idxi
-        auto scan_one_list = [&] (idx_t key, float coarse_dis_i, const float *original_codes,
+        auto scan_one_list = [&] (idx_t key, float coarse_dis_i, const float *arranged_codes,
                                   float *simi, idx_t *idxi, ConcurrentBitsetPtr bitset) {
 
             if (key < 0) {
@@ -647,6 +649,7 @@ void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x,
                                     key, nlist);
 
             size_t list_size = invlists->list_size(key);
+            size_t offset = prefix_sum[key];
 
             // don't waste time on empty lists
             if (list_size == 0) {
@@ -657,7 +660,7 @@ void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x,
 
             nlistv++;
 
-            InvertedLists::ScopedCodes scodes (invlists, key, (const uint8_t *) original_codes);
+            InvertedLists::ScopedCodes scodes (invlists, key, (const uint8_t *) arranged_codes);
 
             std::unique_ptr<InvertedLists::ScopedIds> sids;
             const Index::idx_t * ids = nullptr;
@@ -667,7 +670,7 @@ void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x,
                 ids = sids->get();
             }
 
-            nheap += scanner->scan_codes_outside (list_size, scodes.get(),
+            nheap += scanner->scan_codes_outside (list_size, scodes.get(), offset, 
                                                   ids, simi, idxi, k, bitset);
 
             return list_size;
@@ -701,7 +704,7 @@ void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x,
                     nscan += scan_one_list (
                          keys [i * nprobe + ik],
                          coarse_dis[i * nprobe + ik],
-                         original_codes,
+                         arranged_codes,
                          simi, idxi, bitset
                     );
 
@@ -731,7 +734,7 @@ void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x,
                     ndis += scan_one_list
                         (keys [i * nprobe + ik],
                          coarse_dis[i * nprobe + ik],
-                         original_codes,
+                         arranged_codes,
                          local_dis.data(), local_idx.data(), bitset);
 
                     // can't do the test on max_codes

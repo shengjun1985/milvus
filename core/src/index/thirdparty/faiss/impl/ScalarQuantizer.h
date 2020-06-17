@@ -135,6 +135,7 @@ struct IVFSQScannerIP: InvertedListScanner {
 
     size_t scan_codes_outside (size_t list_size,
                                const uint8_t *codes,
+                               size_t offset,
                                const idx_t *ids,
                                float *simi, idx_t *idxi,
                                size_t k,
@@ -232,6 +233,7 @@ struct IVFSQScannerL2: InvertedListScanner {
 
     size_t scan_codes_outside (size_t list_size,
                                const uint8_t *codes,
+                               size_t offset,
                                const idx_t *ids,
                                float *simi, idx_t *idxi,
                                size_t k,
