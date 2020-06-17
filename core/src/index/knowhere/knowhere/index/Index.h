@@ -23,10 +23,10 @@ namespace knowhere {
 class Index : public milvus::cache::DataObj {
  public:
     virtual BinarySet
-    Serialize(const Config& config = Config());
+    Serialize(const Config& config = Config()) {};
 
     virtual void
-    Load(const BinarySet&);
+    Load(const BinarySet&) {};
 
     virtual void
     Load(const BinarySet&, const void*) {};
