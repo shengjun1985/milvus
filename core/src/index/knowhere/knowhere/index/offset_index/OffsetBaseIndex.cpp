@@ -27,11 +27,10 @@ OffsetBaseIndex::SerializeImpl(const IndexType& type) {
         faiss::Index* index = index_.get();
 
         MemoryIOWriter writer;
-        faiss::write_index(index, &writer);
+        faiss::write_index_nm(index, &writer);
         std::shared_ptr<uint8_t[]> data(writer.data_);
 
         BinarySet res_set;
-        // TODO(linxj): use virtual func Name() instead of raw string.
         res_set.Append("IVF", data, writer.rp);
         return res_set;
     } catch (std::exception& e) {
@@ -47,7 +46,7 @@ OffsetBaseIndex::LoadImpl(const BinarySet& binary_set, const IndexType& type) {
     reader.total = binary->size;
     reader.data_ = binary->data.get();
 
-    faiss::Index* index = faiss::read_index(&reader);
+    faiss::Index* index = faiss::read_index_nm(&reader);
     index_.reset(index);
 
     SealImpl();
