@@ -832,7 +832,7 @@ Index *read_index_nm (IOReader *f, int io_flags) {
         IndexIVFFlat * ivfl = new IndexIVFFlat ();
         read_ivf_header (ivfl, f);
         ivfl->code_size = ivfl->d * sizeof(float);
-        read_InvertedLists (ivfl, f, io_flags);
+        read_InvertedLists_nm (ivfl, f, io_flags);
         idx = ivfl;
     } else if(h == fourcc ("IwSq")) {
         IndexIVFScalarQuantizer * ivsc = new IndexIVFScalarQuantizer();
@@ -840,7 +840,7 @@ Index *read_index_nm (IOReader *f, int io_flags) {
         read_ScalarQuantizer (&ivsc->sq, f);
         READ1 (ivsc->code_size);
         READ1 (ivsc->by_residual);
-        read_InvertedLists (ivsc, f, io_flags);
+        read_InvertedLists_nm (ivsc, f, io_flags);
         idx = ivsc;
     } else if (h == fourcc("ISqH")) {
         IndexIVFSQHybrid *ivfsqhbyrid = new IndexIVFSQHybrid();
@@ -848,7 +848,7 @@ Index *read_index_nm (IOReader *f, int io_flags) {
         read_ScalarQuantizer(&ivfsqhbyrid->sq, f);
         READ1 (ivfsqhbyrid->code_size);
         READ1 (ivfsqhbyrid->by_residual);
-        read_InvertedLists(ivfsqhbyrid, f, io_flags);
+        read_InvertedLists_nm(ivfsqhbyrid, f, io_flags);
         idx = ivfsqhbyrid;
     } else {
         FAISS_THROW_FMT("Index type 0x%08x not supported\n", h);

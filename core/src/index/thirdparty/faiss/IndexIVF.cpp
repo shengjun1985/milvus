@@ -670,8 +670,8 @@ void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x,
                 ids = sids->get();
             }
 
-            nheap += scanner->scan_codes_outside (list_size, scodes.get(), offset, 
-                                                  ids, simi, idxi, k, bitset);
+            nheap += scanner->scan_codes (list_size, (const uint8_t *) ((const float *)scodes.get() + d * offset),
+                                          ids, simi, idxi, k, bitset);
 
             return list_size;
         };

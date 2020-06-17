@@ -381,14 +381,6 @@ struct InvertedListScanner {
                                size_t k,
                                ConcurrentBitsetPtr bitset = nullptr) const = 0;
 
-    /** Similar to scan_codes, but codes are stored outside. **/
-    virtual size_t scan_codes_outside (size_t n,
-                                       const uint8_t *codes,
-                                       size_t offset,
-                                       const idx_t *ids,
-                                       float *distances, idx_t *labels,
-                                       size_t k,
-                                       ConcurrentBitsetPtr bitset = nullptr) const = 0;
 
     /** scan a set of codes, compute distances to current query and
      * update results if distances are below radius
