@@ -30,6 +30,9 @@ class IVFSQ_NM : public IVF_NM {
     }
 
     void
+    Load(const BinarySet&, const void*, size_t) override;
+
+    void
     Train(const DatasetPtr&, const Config&) override;
 
     VecIndexPtr

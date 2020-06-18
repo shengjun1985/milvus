@@ -327,7 +327,7 @@ void IndexIVF::search (idx_t n, const float *x, idx_t k,
 }
 
 void IndexIVF::search_without_codes (idx_t n, const float *x, 
-                                     const float *arranged_codes, std::vector<size_t> prefix_sum, 
+                                     const uint8_t *arranged_codes, std::vector<size_t> prefix_sum, 
                                      idx_t k, float *distances, idx_t *labels,
                                      ConcurrentBitsetPtr bitset) 
 {
@@ -576,7 +576,7 @@ void IndexIVF::search_preassigned (idx_t n, const float *x, idx_t k,
 
 
 void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x, 
-                                                 const float *arranged_codes, 
+                                                 const uint8_t *arranged_codes, 
                                                  std::vector<size_t> prefix_sum,  idx_t k,
                                                  const idx_t *keys,
                                                  const float *coarse_dis ,
@@ -637,7 +637,7 @@ void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x,
 
         // single list scan using the current scanner (with query
         // set porperly) and storing results in simi and idxi
-        auto scan_one_list = [&] (idx_t key, float coarse_dis_i, const float *arranged_codes,
+        auto scan_one_list = [&] (idx_t key, float coarse_dis_i, const uint8_t *arranged_codes,
                                   float *simi, idx_t *idxi, ConcurrentBitsetPtr bitset) {
 
             if (key < 0) {
@@ -660,7 +660,7 @@ void IndexIVF::search_preassigned_without_codes (idx_t n, const float *x,
 
             nlistv++;
 
-            InvertedLists::ScopedCodes scodes (invlists, key, (const uint8_t *) arranged_codes);
+            InvertedLists::ScopedCodes scodes (invlists, key, arranged_codes);
 
             std::unique_ptr<InvertedLists::ScopedIds> sids;
             const Index::idx_t * ids = nullptr;

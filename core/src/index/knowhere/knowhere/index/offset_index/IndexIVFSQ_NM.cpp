@@ -16,6 +16,8 @@
 #include <faiss/gpu/GpuAutoTune.h>
 #include <faiss/gpu/GpuCloner.h>
 #endif
+#include <faiss/IndexScalarQuantizer.h>
+#include <faiss/impl/ScalarQuantizer.h>
 #include <faiss/clone_index.h>
 #include <faiss/index_factory.h>
 
@@ -30,6 +32,45 @@
 
 namespace milvus {
 namespace knowhere {
+
+void
+IVFSQ_NM::Load(const BinarySet& binary_set, const void* p_data, size_t nb) {
+    std::lock_guard<std::mutex> lk(mutex_);
+    LoadImpl(binary_set, index_type_);
+
+    // Construct arranged data from original data
+    const float *original_data = (const float *) p_data;
+    auto ivfsq_index = dynamic_cast<faiss::IndexIVFScalarQuantizer*>(index_.get());
+    auto invlists = ivfsq_index->invlists;
+    auto ails = dynamic_cast<faiss::ArrayInvertedLists *> (invlists);
+    auto d = ivfsq_index->d;
+    auto sq = ivfsq_index->sq;
+    auto code_size = ivfsq_index->code_size;
+    std::unique_ptr<Quantizer> squant(sq.select_quantizer());
+    arranged_data = new uint8_t[code_size * nb];
+    prefix_sum.resize(ails->nlist);
+    std::vector<float> residual (d);
+    std::vector<uint8_t> one_code (code_size);
+
+    size_t curr_index = 0;
+    for (int i = 0; i < ails->nlist; i++) {
+        auto list_size = ails->ids[i].size();
+        for (int j = 0; j < list_size; j++) {
+            const float *x_j = original_data + d * (curr_index + j);
+            if (ivfsq_index->by_residual) {
+                ivfsq_index->quantizer->compute_residual (x_j, residual.data(), i);
+                x_j = residual.data();
+            }
+
+            memset (one_code.data(), 0, code_size);
+            squant->encode_vector (x_j, one_code.data());
+
+            memcpy(arranged_data + code_size * (curr_index + j), one_code.data(), code_size);
+        }
+        prefix_sum[i] = curr_index;
+        curr_index += list_size;
+    }
+}
 
 void
 IVFSQ_NM::Train(const DatasetPtr& dataset_ptr, const Config& config) {
