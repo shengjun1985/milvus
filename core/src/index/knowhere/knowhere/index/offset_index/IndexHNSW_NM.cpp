@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "faiss/BuilderSuspend.h"
-#include "hnswlib/hnswalg_nm.h"
 #include "hnswlib/space_ip.h"
 #include "hnswlib/space_l2.h"
 #include "knowhere/common/Exception.h"
@@ -27,7 +26,7 @@
 #include "knowhere/index/vector_index/helpers/FaissIO.h"
 
 namespace milvus {
-    namespace knowhere {
+namespace knowhere {
 
 // void
 // normalize_vector(float* data, float* norm_array, size_t dim) {
@@ -37,199 +36,177 @@ namespace milvus {
 //     for (int i = 0; i < dim; i++) norm_array[i] = data[i] * norm;
 // }
 
-        BinarySet
-        IndexHNSW::Serialize(const Config& config) {
-            if (!index_) {
-                KNOWHERE_THROW_MSG("index not initialize or trained");
-            }
+BinarySet
+IndexHNSW::Serialize(const Config& config) {
+    if (!index_) {
+        KNOWHERE_THROW_MSG("index not initialize or trained");
+    }
 
-            try {
-                MemoryIOWriter writer;
-                index_->saveIndex(writer);
-                std::shared_ptr<uint8_t[]> data(writer.data_);
+    try {
+        MemoryIOWriter writer;
+        index_->saveIndex(writer);
+        std::shared_ptr<uint8_t[]> data(writer.data_);
 
-                BinarySet res_set;
-                res_set.Append("HNSW", data, writer.rp);
-                return res_set;
-            } catch (std::exception& e) {
-                KNOWHERE_THROW_MSG(e.what());
-            }
+        BinarySet res_set;
+        res_set.Append("HNSW", data, writer.rp);
+        return res_set;
+    } catch (std::exception& e) {
+        KNOWHERE_THROW_MSG(e.what());
+    }
+}
+
+void
+IndexHNSW::Load(const BinarySet& index_binary, const void* pdata, const size_t rows) {
+    try {
+        auto binary = index_binary.GetByName("HNSW");
+
+        MemoryIOReader reader;
+        reader.total = binary->size;
+        reader.data_ = binary->data.get();
+
+        hnswlib::SpaceInterface<float>* space;
+        index_ = std::make_shared<hnswlib::HierarchicalNSW_NM<float>>(space);
+        index_->loadIndex(reader);
+
+        normalize = index_->metric_type_ == 1;  // 1 == InnerProduct
+        pdata_ = (float*)malloc(index_->data_size_ * rows);
+        memcpy(pdata_, pdata, index_->data_size_ * rows);
+    } catch (std::exception& e) {
+        KNOWHERE_THROW_MSG(e.what());
+    }
+}
+
+void
+IndexHNSW::Train(const DatasetPtr& dataset_ptr, const Config& config) {
+    try {
+        GETTENSOR(dataset_ptr)
+
+        hnswlib::SpaceInterface<float>* space;
+        if (config[Metric::TYPE] == Metric::L2) {
+            space = new hnswlib::L2Space(dim);
+        } else if (config[Metric::TYPE] == Metric::IP) {
+            space = new hnswlib::InnerProductSpace(dim);
+            normalize = true;
         }
+        index_ = std::make_shared<hnswlib::HierarchicalNSW_NM<float>>(space, rows, config[IndexParams::M].get<int64_t>(),
+                                                                   config[IndexParams::efConstruction].get<int64_t>());
+    } catch (std::exception& e) {
+        KNOWHERE_THROW_MSG(e.what());
+    }
+}
 
-        void
-        IndexHNSW::Load(const BinarySet& index_binary) {
-            try {
-                auto binary = index_binary.GetByName("HNSW");
+void
+IndexHNSW::Add(const DatasetPtr& dataset_ptr, const Config& config) {
+    if (!index_) {
+        KNOWHERE_THROW_MSG("index not initialize");
+    }
 
-                MemoryIOReader reader;
-                reader.total = binary->size;
-                reader.data_ = binary->data.get();
+    std::lock_guard<std::mutex> lk(mutex_);
 
-                hnswlib::SpaceInterface<float>* space;
-                index_ = std::make_shared<hnswlib::HierarchicalNSW<float>>(space);
-                index_->loadIndex(reader);
+    GETTENSORWITHIDS(dataset_ptr)
 
-                normalize = index_->metric_type_ == 1;  // 1 == InnerProduct
-            } catch (std::exception& e) {
-                KNOWHERE_THROW_MSG(e.what());
-            }
-        }
+    //     if (normalize) {
+    //         std::vector<float> ep_norm_vector(Dim());
+    //         normalize_vector((float*)(p_data), ep_norm_vector.data(), Dim());
+    //         index_->addPoint((void*)(ep_norm_vector.data()), p_ids[0]);
+    // #pragma omp parallel for
+    //         for (int i = 1; i < rows; ++i) {
+    //             std::vector<float> norm_vector(Dim());
+    //             normalize_vector((float*)(p_data + Dim() * i), norm_vector.data(), Dim());
+    //             index_->addPoint((void*)(norm_vector.data()), p_ids[i]);
+    //         }
+    //     } else {
+    //         index_->addPoint((void*)(p_data), p_ids[0]);
+    // #pragma omp parallel for
+    //         for (int i = 1; i < rows; ++i) {
+    //             index_->addPoint((void*)(p_data + Dim() * i), p_ids[i]);
+    //         }
+    //     }
 
-        void
-        IndexHNSW::Train(const DatasetPtr& dataset_ptr, const Config& config) {
-            try {
-                GETTENSOR(dataset_ptr)
-
-                hnswlib::SpaceInterface<float>* space;
-                if (config[Metric::TYPE] == Metric::L2) {
-                    space = new hnswlib::L2Space(dim);
-                } else if (config[Metric::TYPE] == Metric::IP) {
-                    space = new hnswlib::InnerProductSpace(dim);
-                    normalize = true;
-                }
-                index_ = std::make_shared<hnswlib::HierarchicalNSW<float>>(space, rows, config[IndexParams::M].get<int64_t>(),
-                                                                           config[IndexParams::efConstruction].get<int64_t>());
-                std::cout << "hnsw index has already created" << std::endl;
-            } catch (std::exception& e) {
-                KNOWHERE_THROW_MSG(e.what());
-            }
-        }
-
-        void
-        IndexHNSW::Add(const DatasetPtr& dataset_ptr, const Config& config) {
-            if (!index_) {
-                KNOWHERE_THROW_MSG("index not initialize");
-            }
-
-            std::lock_guard<std::mutex> lk(mutex_);
-
-            GETTENSORWITHIDS(dataset_ptr)
-
-            std::chrono::high_resolution_clock::time_point ts, te;
-            ts = std::chrono::high_resolution_clock::now();
-            FILE *pf = fopen("/tmp/hnsw_raw_data.txt", "w");
-            fwrite(p_data, sizeof(float), (size_t)rows * dim, pf);
-            fclose(pf);
-            te = std::chrono::high_resolution_clock::now();
-            std::cout << "save raw data costs: " << std::chrono::duration_cast<std::chrono::milliseconds>(te - ts).count() << " ms" << std::endl;
-
-            //     if (normalize) {
-            //         std::vector<float> ep_norm_vector(Dim());
-            //         normalize_vector((float*)(p_data), ep_norm_vector.data(), Dim());
-            //         index_->addPoint((void*)(ep_norm_vector.data()), p_ids[0]);
-            // #pragma omp parallel for
-            //         for (int i = 1; i < rows; ++i) {
-            //             std::vector<float> norm_vector(Dim());
-            //             normalize_vector((float*)(p_data + Dim() * i), norm_vector.data(), Dim());
-            //             index_->addPoint((void*)(norm_vector.data()), p_ids[i]);
-            //         }
-            //     } else {
-            //         index_->addPoint((void*)(p_data), p_ids[0]);
-            // #pragma omp parallel for
-            //         for (int i = 1; i < rows; ++i) {
-            //             index_->addPoint((void*)(p_data + Dim() * i), p_ids[i]);
-            //         }
-            //     }
-
-            auto base = index_->getCurrentElementCount();
-            std::cout << "start build hnsw index" << std::endl;
-            auto pp_data = const_cast<void*>(p_data);
-            index_->addPoint(pp_data, p_ids[0], base, 0);
-            std::cout << "the first point add finished" << std::endl;
+    auto base = index_->getCurrentElementCount();
+    auto pp_data = const_cast<void*>(p_data);
+    index_->addPoint(pp_data, p_ids[0], base, 0);
 #pragma omp parallel for
-            for (int i = 1; i < rows; ++i) {
-                faiss::BuilderSuspend::check_wait();
-//        index_->addPoint(((float*)p_data + Dim() * i), p_ids[i]);
-                index_->addPoint(pp_data, p_ids[i], base, i);
-            }
-            std::cout << "HNSW.Add finished" << std::endl;
-        }
+    for (int i = 1; i < rows; ++i) {
+        faiss::BuilderSuspend::check_wait();
+        index_->addPoint(pp_data, p_ids[i], base, i);
+    }
+}
 
-        DatasetPtr
-        IndexHNSW::Query(const DatasetPtr& dataset_ptr, const Config& config) {
-            if (!index_) {
-                KNOWHERE_THROW_MSG("index not initialize or trained");
-            }
-            GETTENSOR(dataset_ptr)
-            float *tmp_data = (float*)malloc(size_t(1000000) * 128 * sizeof(float));
+DatasetPtr
+IndexHNSW::Query(const DatasetPtr& dataset_ptr, const Config& config) {
+    if (!index_) {
+        KNOWHERE_THROW_MSG("index not initialize or trained");
+    }
+    GETTENSOR(dataset_ptr)
 
-            std::chrono::high_resolution_clock::time_point ts, te;
-            ts = std::chrono::high_resolution_clock::now();
-            FILE *pf = fopen("/tmp/hnsw_raw_data.txt", "r");
-            fread(tmp_data, sizeof(float), (size_t)1000000 * 128, pf);
-            fclose(pf);
-            te = std::chrono::high_resolution_clock::now();
-            std::cout << "read raw data costs: " << std::chrono::duration_cast<std::chrono::milliseconds>(te - ts).count() << " ms" << std::endl;
+    size_t k = config[meta::TOPK].get<int64_t>();
+    size_t id_size = sizeof(int64_t) * k;
+    size_t dist_size = sizeof(float) * k;
+    auto p_id = (int64_t*)malloc(id_size * rows);
+    auto p_dist = (float*)malloc(dist_size * rows);
 
+    index_->setEf(config[IndexParams::ef]);
 
-            size_t k = config[meta::TOPK].get<int64_t>();
-            size_t id_size = sizeof(int64_t) * k;
-            size_t dist_size = sizeof(float) * k;
-            auto p_id = (int64_t*)malloc(id_size * rows);
-            auto p_dist = (float*)malloc(dist_size * rows);
+    using P = std::pair<float, int64_t>;
+    auto compare = [](const P& v1, const P& v2) { return v1.first < v2.first; };
 
-            index_->setEf(config[IndexParams::ef]);
-
-            using P = std::pair<float, int64_t>;
-            auto compare = [](const P& v1, const P& v2) { return v1.first < v2.first; };
-
-            faiss::ConcurrentBitsetPtr blacklist = GetBlacklist();
+    faiss::ConcurrentBitsetPtr blacklist = GetBlacklist();
 #pragma omp parallel for
-            for (unsigned int i = 0; i < rows; ++i) {
-                std::vector<P> ret;
-                const float* single_query = (float*)p_data + i * Dim();
+    for (unsigned int i = 0; i < rows; ++i) {
+        std::vector<P> ret;
+        const float* single_query = (float*)p_data + i * Dim();
 
-                // if (normalize) {
-                //     std::vector<float> norm_vector(Dim());
-                //     normalize_vector((float*)(single_query), norm_vector.data(), Dim());
-                //     ret = index_->searchKnn((float*)(norm_vector.data()), config[meta::TOPK].get<int64_t>(), compare);
-                // } else {
-                //     ret = index_->searchKnn((float*)single_query, config[meta::TOPK].get<int64_t>(), compare);
-                // }
-                ret = index_->searchKnn((float*)single_query, k, compare, blacklist, tmp_data);
+        // if (normalize) {
+        //     std::vector<float> norm_vector(Dim());
+        //     normalize_vector((float*)(single_query), norm_vector.data(), Dim());
+        //     ret = index_->searchKnn((float*)(norm_vector.data()), config[meta::TOPK].get<int64_t>(), compare);
+        // } else {
+        //     ret = index_->searchKnn((float*)single_query, config[meta::TOPK].get<int64_t>(), compare);
+        // }
+        ret = index_->searchKnn_NM((void*)single_query, k, compare, blacklist, (float*)pdata_);
 
-                while (ret.size() < k) {
-                    ret.emplace_back(std::make_pair(-1, -1));
-                }
-                std::vector<float> dist;
-                std::vector<int64_t> ids;
-
-                if (normalize) {
-                    std::transform(ret.begin(), ret.end(), std::back_inserter(dist),
-                                   [](const std::pair<float, int64_t>& e) { return float(1 - e.first); });
-                } else {
-                    std::transform(ret.begin(), ret.end(), std::back_inserter(dist),
-                                   [](const std::pair<float, int64_t>& e) { return e.first; });
-                }
-                std::transform(ret.begin(), ret.end(), std::back_inserter(ids),
-                               [](const std::pair<float, int64_t>& e) { return e.second; });
-
-                memcpy(p_dist + i * k, dist.data(), dist_size);
-                memcpy(p_id + i * k, ids.data(), id_size);
-            }
-
-            auto ret_ds = std::make_shared<Dataset>();
-            ret_ds->Set(meta::IDS, p_id);
-            ret_ds->Set(meta::DISTANCE, p_dist);
-            free(tmp_data);
-            return ret_ds;
+        while (ret.size() < k) {
+            ret.emplace_back(std::make_pair(-1, -1));
         }
+        std::vector<float> dist;
+        std::vector<int64_t> ids;
 
-        int64_t
-        IndexHNSW::Count() {
-            if (!index_) {
-                KNOWHERE_THROW_MSG("index not initialize");
-            }
-            return index_->cur_element_count;
+        if (normalize) {
+            std::transform(ret.begin(), ret.end(), std::back_inserter(dist),
+                           [](const std::pair<float, int64_t>& e) { return float(1 - e.first); });
+        } else {
+            std::transform(ret.begin(), ret.end(), std::back_inserter(dist),
+                           [](const std::pair<float, int64_t>& e) { return e.first; });
         }
+        std::transform(ret.begin(), ret.end(), std::back_inserter(ids),
+                       [](const std::pair<float, int64_t>& e) { return e.second; });
 
-        int64_t
-        IndexHNSW::Dim() {
-            if (!index_) {
-                KNOWHERE_THROW_MSG("index not initialize");
-            }
-            return (*(size_t*)index_->dist_func_param_);
-        }
+        memcpy(p_dist + i * k, dist.data(), dist_size);
+        memcpy(p_id + i * k, ids.data(), id_size);
+    }
 
-    }  // namespace knowhere
+    auto ret_ds = std::make_shared<Dataset>();
+    ret_ds->Set(meta::IDS, p_id);
+    ret_ds->Set(meta::DISTANCE, p_dist);
+    return ret_ds;
+}
+
+int64_t
+IndexHNSW::Count() {
+    if (!index_) {
+        KNOWHERE_THROW_MSG("index not initialize");
+    }
+    return index_->cur_element_count;
+}
+
+int64_t
+IndexHNSW::Dim() {
+    if (!index_) {
+        KNOWHERE_THROW_MSG("index not initialize");
+    }
+    return (*(size_t*)index_->dist_func_param_);
+}
+
+}  // namespace knowhere
 }  // namespace milvus

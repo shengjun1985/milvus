@@ -1130,6 +1130,17 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
 
         return result;
     }
+
+    void addPoint(void *datapoint, labeltype label, size_t base, size_t offset) {
+        printf("wrong method addPoint invoked!\n");
+        return;
+    }
+
+    std::priority_queue<std::pair<dist_t, labeltype >> searchKnn_NM(const void* query_data, size_t k, faiss::ConcurrentBitsetPtr bitset, dist_t *pdata) const {
+        printf("wrong method searchKnn invoked!\n");
+        std::priority_queue<std::pair<dist_t, labeltype >> ret;
+        return ret;
+    }
 };
 
 }

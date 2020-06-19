@@ -161,7 +161,7 @@ IndexHNSW::Query(const DatasetPtr& dataset_ptr, const Config& config) {
         // } else {
         //     ret = index_->searchKnn((float*)single_query, config[meta::TOPK].get<int64_t>(), compare);
         // }
-        ret = index_->searchKnn((float*)single_query, k, compare, blacklist);
+        ret = index_->searchKnn((void*)single_query, k, compare, blacklist);
 
         while (ret.size() < k) {
             ret.emplace_back(std::make_pair(-1, -1));

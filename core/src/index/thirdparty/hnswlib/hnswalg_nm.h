@@ -15,16 +15,16 @@ namespace hnswlib {
     typedef unsigned int linklistsizeint;
 
     template<typename dist_t>
-    class HierarchicalNSW : public AlgorithmInterface<dist_t> {
+    class HierarchicalNSW_NM : public AlgorithmInterface<dist_t> {
     public:
-        HierarchicalNSW(SpaceInterface<dist_t> *s) {
+        HierarchicalNSW_NM(SpaceInterface<dist_t> *s) {
         }
 
-        HierarchicalNSW(SpaceInterface<dist_t> *s, const std::string &location, bool nmslib = false, size_t max_elements=0) {
+        HierarchicalNSW_NM(SpaceInterface<dist_t> *s, const std::string &location, bool nmslib = false, size_t max_elements=0) {
             loadIndex(location, s, max_elements);
         }
 
-        HierarchicalNSW(SpaceInterface<dist_t> *s, size_t max_elements, size_t M = 16, size_t ef_construction = 200, size_t random_seed = 100) :
+        HierarchicalNSW_NM(SpaceInterface<dist_t> *s, size_t max_elements, size_t M = 16, size_t ef_construction = 200, size_t random_seed = 100) :
                 link_list_locks_(max_elements), element_levels_(max_elements) {
             // linxj
             space = s;
@@ -78,7 +78,7 @@ namespace hnswlib {
             linkLists_ = (char **) malloc(sizeof(void *) * max_elements_);
             mem_stats_ += sizeof(void *) * max_elements_;
             if (linkLists_ == nullptr)
-                throw std::runtime_error("Not enough memory: HierarchicalNSW failed to allocate linklists");
+                throw std::runtime_error("Not enough memory: HierarchicalNSW_NM failed to allocate linklists");
             size_links_per_element_ = maxM_ * sizeof(tableint) + sizeof(linklistsizeint);
             mult_ = 1 / log(1.0 * M_);
             revSize_ = 1.0 / mult_;
@@ -92,7 +92,7 @@ namespace hnswlib {
             }
         };
 
-        ~HierarchicalNSW() {
+        ~HierarchicalNSW_NM() {
 
             free(data_level0_memory_);
             for (tableint i = 0; i < cur_element_count; i++) {
@@ -1133,7 +1133,7 @@ namespace hnswlib {
         };
 
         std::priority_queue<std::pair<dist_t, labeltype >>
-        searchKnn(const void *query_data, size_t k, faiss::ConcurrentBitsetPtr bitset, dist_t *pdata) const {
+        searchKnn_NM(const void *query_data, size_t k, faiss::ConcurrentBitsetPtr bitset, dist_t *pdata) const {
             std::priority_queue<std::pair<dist_t, labeltype >> result;
             if (cur_element_count == 0) return result;
 
@@ -1189,11 +1189,11 @@ namespace hnswlib {
 
         template <typename Comp>
         std::vector<std::pair<dist_t, labeltype>>
-        searchKnn(const void* query_data, size_t k, Comp comp, faiss::ConcurrentBitsetPtr bitset, dist_t *pdata) {
+        searchKnn_NM(const void* query_data, size_t k, Comp comp, faiss::ConcurrentBitsetPtr bitset, dist_t *pdata) {
             std::vector<std::pair<dist_t, labeltype>> result;
             if (cur_element_count == 0) return result;
 
-            auto ret = searchKnn(query_data, k, bitset, pdata);
+            auto ret = searchKnn_NM(query_data, k, bitset, pdata);
 
             while (!ret.empty()) {
                 result.push_back(ret.top());
@@ -1203,6 +1203,17 @@ namespace hnswlib {
             std::sort(result.begin(), result.end(), comp);
 
             return result;
+        }
+
+        void addPoint(const void *datapoint, labeltype label) {
+            printf("wrong method addPoint invoked!\n");
+            return;
+        }
+
+        std::priority_queue<std::pair<dist_t, labeltype >> searchKnn(const void *query_data, size_t k, faiss::ConcurrentBitsetPtr bitset) const {
+            printf("wrong method searchKnn invoked!\n");
+            std::priority_queue<std::pair<dist_t, labeltype >> ret;
+            return ret;
         }
     };
 
