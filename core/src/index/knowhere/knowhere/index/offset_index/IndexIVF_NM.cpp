@@ -67,14 +67,15 @@ IVF_NM::Load(const BinarySet& binary_set, const void* p_data, size_t nb) {
     auto invlists = ivf_index->invlists;
     auto ails = dynamic_cast<faiss::ArrayInvertedLists *> (invlists);
     auto d = ivf_index->d;
-    arranged_data = new float[d * nb];
+    arranged_data = new uint8_t[d * sizeof(float) * nb];
+    prefix_sum.resize(ails->nlist);
     size_t curr_index = 0;
     for (int i = 0; i < ails->nlist; i++) {
         auto list_size = ails->ids[i].size();
         for (int j = 0; j < list_size; j++) {
-            memcpy(arranged_data + d * (curr_index + j), original_data + d * ails->ids[i][j], d * sizeof(float));
+            memcpy(arranged_data + d * sizeof(float) * (curr_index + j), original_data + d * ails->ids[i][j], d * sizeof(float));
         }
-        prefix_sum.push_back(curr_index);
+        prefix_sum[i] = curr_index;
         curr_index += list_size;
     }
 }
@@ -304,7 +305,7 @@ IVF_NM::QueryImpl(int64_t n, const float* data, int64_t k, float* distances, int
     } else {
         ivf_index->parallel_mode = 0;
     }
-    ivf_index->search_without_codes(n, (float*)data, arranged_data, prefix_sum, k, distances, labels, bitset_);
+    ivf_index->search_without_codes(n, (float*)data, (const uint8_t *) arranged_data, prefix_sum, k, distances, labels, bitset_);
     stdclock::time_point after = stdclock::now();
     double search_cost = (std::chrono::duration<double, std::micro>(after - before)).count();
     LOG_KNOWHERE_DEBUG_ << "IVF search cost: " << search_cost

@@ -94,7 +94,7 @@ class IVF_NM : public VecIndex, public OffsetBaseIndex {
 
  protected:
     std::mutex mutex_;
-    float *arranged_data;
+    uint8_t *arranged_data;
     std::vector<size_t> prefix_sum;
 };
 
