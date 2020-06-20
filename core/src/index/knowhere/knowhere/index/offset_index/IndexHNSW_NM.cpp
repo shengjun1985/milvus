@@ -37,7 +37,7 @@ namespace knowhere {
 // }
 
 BinarySet
-IndexHNSW::Serialize(const Config& config) {
+IndexHNSW_NM::Serialize(const Config& config) {
     if (!index_) {
         KNOWHERE_THROW_MSG("index not initialize or trained");
     }
@@ -56,7 +56,7 @@ IndexHNSW::Serialize(const Config& config) {
 }
 
 void
-IndexHNSW::Load(const BinarySet& index_binary, const void* pdata, const size_t rows) {
+IndexHNSW_NM::Load(const BinarySet& index_binary, const void* pdata, const size_t rows) {
     try {
         auto binary = index_binary.GetByName("HNSW");
 
@@ -77,7 +77,7 @@ IndexHNSW::Load(const BinarySet& index_binary, const void* pdata, const size_t r
 }
 
 void
-IndexHNSW::Train(const DatasetPtr& dataset_ptr, const Config& config) {
+IndexHNSW_NM::Train(const DatasetPtr& dataset_ptr, const Config& config) {
     try {
         GETTENSOR(dataset_ptr)
 
@@ -96,7 +96,7 @@ IndexHNSW::Train(const DatasetPtr& dataset_ptr, const Config& config) {
 }
 
 void
-IndexHNSW::Add(const DatasetPtr& dataset_ptr, const Config& config) {
+IndexHNSW_NM::Add(const DatasetPtr& dataset_ptr, const Config& config) {
     if (!index_) {
         KNOWHERE_THROW_MSG("index not initialize");
     }
@@ -134,7 +134,7 @@ IndexHNSW::Add(const DatasetPtr& dataset_ptr, const Config& config) {
 }
 
 DatasetPtr
-IndexHNSW::Query(const DatasetPtr& dataset_ptr, const Config& config) {
+IndexHNSW_NM::Query(const DatasetPtr& dataset_ptr, const Config& config) {
     if (!index_) {
         KNOWHERE_THROW_MSG("index not initialize or trained");
     }
@@ -193,7 +193,7 @@ IndexHNSW::Query(const DatasetPtr& dataset_ptr, const Config& config) {
 }
 
 int64_t
-IndexHNSW::Count() {
+IndexHNSW_NM::Count() {
     if (!index_) {
         KNOWHERE_THROW_MSG("index not initialize");
     }
@@ -201,7 +201,7 @@ IndexHNSW::Count() {
 }
 
 int64_t
-IndexHNSW::Dim() {
+IndexHNSW_NM::Dim() {
     if (!index_) {
         KNOWHERE_THROW_MSG("index not initialize");
     }

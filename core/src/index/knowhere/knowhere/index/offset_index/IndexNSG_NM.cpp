@@ -31,13 +31,13 @@ namespace milvus {
 namespace knowhere {
 
 BinarySet
-NSG::Serialize(const Config& config) {
+NSG_NM::Serialize(const Config& config) {
     if (!index_ || !index_->is_trained) {
         KNOWHERE_THROW_MSG("index not initialize or trained");
     }
 
     try {
-        fiu_do_on("NSG.Serialize.throw_exception", throw std::exception());
+        fiu_do_on("NSG_NM.Serialize.throw_exception", throw std::exception());
         std::lock_guard<std::mutex> lk(mutex_);
         impl::NsgIndex* index = index_.get();
 
@@ -46,7 +46,7 @@ NSG::Serialize(const Config& config) {
         std::shared_ptr<uint8_t[]> data(writer.data_);
 
         BinarySet res_set;
-        res_set.Append("NSG", data, writer.rp);
+        res_set.Append("NSG_NM", data, writer.rp);
         return res_set;
     } catch (std::exception& e) {
         KNOWHERE_THROW_MSG(e.what());
@@ -54,11 +54,11 @@ NSG::Serialize(const Config& config) {
 }
 
 void
-NSG::Load(const BinarySet& index_binary, const void* pdata, const size_t rows) {
+NSG_NM::Load(const BinarySet& index_binary, const void* pdata, const size_t rows) {
     try {
-        fiu_do_on("NSG.Load.throw_exception", throw std::exception());
+        fiu_do_on("NSG_NM.Load.throw_exception", throw std::exception());
         std::lock_guard<std::mutex> lk(mutex_);
-        auto binary = index_binary.GetByName("NSG");
+        auto binary = index_binary.GetByName("NSG_NM");
 
         MemoryIOReader reader;
         reader.total = binary->size;
@@ -74,7 +74,7 @@ NSG::Load(const BinarySet& index_binary, const void* pdata, const size_t rows) {
 }
 
 DatasetPtr
-NSG::Query(const DatasetPtr& dataset_ptr, const Config& config) {
+NSG_NM::Query(const DatasetPtr& dataset_ptr, const Config& config) {
     if (!index_ || !index_->is_trained) {
         KNOWHERE_THROW_MSG("index not initialize or trained");
     }
@@ -110,7 +110,7 @@ NSG::Query(const DatasetPtr& dataset_ptr, const Config& config) {
 }
 
 void
-NSG::Train(const DatasetPtr& dataset_ptr, const Config& config) {
+NSG_NM::Train(const DatasetPtr& dataset_ptr, const Config& config) {
     auto idmap = std::make_shared<IDMAP>();
     idmap->Train(dataset_ptr, config);
     idmap->AddWithoutIds(dataset_ptr, config);
@@ -150,12 +150,12 @@ NSG::Train(const DatasetPtr& dataset_ptr, const Config& config) {
 }
 
 int64_t
-NSG::Count() {
+NSG_NM::Count() {
     return index_->ntotal;
 }
 
 int64_t
-NSG::Dim() {
+NSG_NM::Dim() {
     return index_->dimension;
 }
 

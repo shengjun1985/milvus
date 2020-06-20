@@ -23,9 +23,9 @@
 namespace milvus {
 namespace knowhere {
 
-class IndexHNSW : public VecIndex {
+class IndexHNSW_NM : public VecIndex {
  public:
-    IndexHNSW() {
+    IndexHNSW_NM() {
         index_type_ = IndexEnum::INDEX_HNSW;
     }
 

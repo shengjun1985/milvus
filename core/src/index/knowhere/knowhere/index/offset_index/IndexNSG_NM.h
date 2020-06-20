@@ -25,9 +25,9 @@ namespace impl {
 class NsgIndex;
 }
 
-class NSG : public VecIndex {
+class NSG_NM : public VecIndex {
  public:
-    explicit NSG(const int64_t gpu_num = -1) : gpu_(gpu_num) {
+    explicit NSG_NM(const int64_t gpu_num = -1) : gpu_(gpu_num) {
         if (gpu_ >= 0) {
             index_mode_ = IndexMode::MODE_GPU;
         }
@@ -77,7 +77,7 @@ class NSG : public VecIndex {
     void *pdata_ = nullptr;
 };
 
-using NSGIndexPtr = std::shared_ptr<NSG>();
+using NSG_NMIndexPtr = std::shared_ptr<NSG_NM>();
 
 }  // namespace knowhere
 }  // namespace milvus
