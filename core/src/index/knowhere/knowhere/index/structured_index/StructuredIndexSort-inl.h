@@ -195,5 +195,23 @@ StructuredIndexSort<T>::Range(T lower_bound_value, bool lb_inclusive, T upper_bo
     return bitset;
 }
 
+template <typename T>
+const T
+StructuredIndexSort<T>::Max() {
+    if (!is_built_) {
+        build();
+    }
+    return data_.back().a_;
+}
+
+template <typename T>
+const T
+StructuredIndexSort<T>::Min() {
+    if (!is_built_) {
+        build();
+    }
+    return data_.begin()->a_;
+}
+
 }  // namespace knowhere
 }  // namespace milvus

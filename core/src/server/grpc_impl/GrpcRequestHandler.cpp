@@ -1704,6 +1704,12 @@ GrpcRequestHandler::DeserializeJsonToBoolQuery(
         if (dsl_json.empty()) {
             return Status{SERVER_INVALID_ARGUMENT, "Query dsl is null"};
         }
+        if (dsl_json.contains("strategy")) {
+            query_ptr->strategy = dsl_json["strategy"].get<int64_t>();
+        }
+        if (dsl_json.contains("delta")) {
+            query_ptr->delta = dsl_json["delta"].get<float>();
+        }
         auto status = Status::OK();
         if (vector_params.empty()) {
             return Status(SERVER_INVALID_DSL_PARAMETER, "DSL must include vector query");

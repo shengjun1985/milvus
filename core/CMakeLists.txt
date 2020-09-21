@@ -102,8 +102,7 @@ append_flags( CMAKE_CXX_FLAGS
                     "-fPIC"
                     "-DELPP_THREAD_SAFE"
                     "-fopenmp"
-                    "-Werror"
-                    "-rdynamic"
+                    "-Wall"
                     )
 
 # **************************** Coding style check tools ****************************

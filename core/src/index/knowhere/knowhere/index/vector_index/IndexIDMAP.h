@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "knowhere/index/vector_index/FaissBaseIndex.h"
 #include "knowhere/index/vector_index/VecIndex.h"
@@ -48,6 +49,9 @@ class IDMAP : public VecIndex, public FaissBaseIndex {
     DatasetPtr
     Query(const DatasetPtr&, const Config&) override;
 
+    DatasetPtr
+    QueryWithOffset(const DatasetPtr&, const Config&, std::vector<int64_t>&) override;
+
 #if 0
     DatasetPtr
     QueryById(const DatasetPtr& dataset, const Config& config) override;
@@ -81,6 +85,9 @@ class IDMAP : public VecIndex, public FaissBaseIndex {
  protected:
     virtual void
     QueryImpl(int64_t, const float*, int64_t, float*, int64_t*, const Config&);
+
+    virtual void
+    QueryWithOffsetImpl(int64_t, const float*, std::vector<int64_t>&, int64_t, float*, int64_t*, const Config&);
 
  protected:
     std::mutex mutex_;
