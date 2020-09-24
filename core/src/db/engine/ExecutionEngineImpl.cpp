@@ -324,8 +324,9 @@ ExecutionEngineImpl::VecSearchWithOptimizer(milvus::engine::ExecutionEngineConte
     auto query_vector = vector_param->query_vector;
     uint64_t topk = vector_param->topk;
     // maybe need to expand topk
-    if (expand)
+    if (expand) {
         topk = (int64_t) (1.0 * topk * delta);
+    }
 
     context.query_result_ = std::make_shared<QueryResult>();
     context.query_result_->result_ids_.resize(topk * nq);
